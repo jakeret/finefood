@@ -83,7 +83,13 @@ def get_checkpoint_callback():
 def launch(epochs, batch_size, learning_rate, dropout, sample_size=None):
     max_len = 10
 
-    corpus, word_to_index, word_to_vec_map = utils.read_glove_vecs("./data/glove.6B/glove.6B.50d.txt")
+    data_path = get_data_path()
+    if data_path is None:
+        data_path = "./data"
+    path = os.path.join(data_path, "glove.6B.50d.txt")
+    print("Loading glove from", path)
+
+    corpus, word_to_index, word_to_vec_map = utils.read_glove_vecs(path)
 
     X_test, X_train, y_test, y_train = load_data(corpus, max_len, word_to_index, sample_size)
 

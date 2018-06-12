@@ -16,3 +16,6 @@ data
 notebooks
 Pipfile
 Pipfile.lock
+*.ipynb
+output
+logs
