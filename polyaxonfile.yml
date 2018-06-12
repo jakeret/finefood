@@ -5,11 +5,9 @@ kind: experiment
 
 declarations:
   batch_size: 128
-  num_steps: 500
   learning_rate: 0.001
   dropout: 0.25
-  num_epochs: 1
-  activation: relu
+  num_epochs: 10
 
 run:
   image: tensorflow/tensorflow:1.6.0-py3
@@ -17,8 +15,6 @@ run:
     - apt-get -y update && apt-get -y install git
     - pip3 install --no-cache-dir -U polyaxon-helper keras
   cmd:  python3 finefood/run.py --batch_size={{ batch_size }} \
-                         --num_steps={{ num_steps }} \
                          --learning_rate={{ learning_rate }} \
                          --dropout={{ dropout }} \
-                         --num_epochs={{ num_epochs }} \
-                         --activation={{ activation }}
+                         --num_epochs={{ num_epochs }}
