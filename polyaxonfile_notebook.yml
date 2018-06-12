@@ -1,0 +1,9 @@
+---
+version: 1
+
+kind: plugin
+
+run:
+  image: tensorflow/tensorflow:1.6.0-py3
+  build_steps:
+    - pip3 install jupyter keras polyaxon-helper
