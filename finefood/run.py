@@ -52,7 +52,11 @@ def train_model(model, X_train, X_test, y_train, y_test, **kwargs):
 
 
 def get_tensorboard_callback(kwargs):
-    tensorboard = TensorBoard(log_dir=get_outputs_path(),
+    outputs_path = get_outputs_path()
+    if outputs_path is None:
+        outputs_path = "./output"
+
+    tensorboard = TensorBoard(log_dir=outputs_path,
                               histogram_freq=0,
                               batch_size=kwargs.get("batch_size", 32),
                               write_graph=True)
@@ -61,7 +65,11 @@ def get_tensorboard_callback(kwargs):
 
 def get_checkpoint_callback():
     filename = "model-{epoch:02d}-{val_acc:.2f}.hdf5"
-    filepath = os.path.join(get_data_path(), filename)
+    outputs_path = get_outputs_path()
+    if outputs_path is None:
+        outputs_path = "./output"
+
+    filepath = os.path.join(outputs_path, filename)
     checkpoint = ModelCheckpoint(filepath,
                                  monitor='val_acc',
                                  verbose=1,
@@ -92,7 +100,12 @@ def launch(epochs, batch_size, learning_rate, dropout):
 
 
 def load_data(corpus, max_len, word_to_index):
-    df = pd.read_csv("./data/Reviews.csv").set_index("Id")
+    data_path = get_data_path()
+    if data_path is None:
+        data_path = "../data"
+    path = os.path.join(data_path, "Reviews.csv")
+
+    df = pd.read_csv(path).set_index("Id")
     df = df.sample(n=1000)
     clean_texts = np.array([preprocessing.clean_text(t, corpus) for t in df.Text])
     scores = df.Score.values
