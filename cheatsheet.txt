@@ -1,0 +1,35 @@
+gcloud beta container --project "amazonfinefood" clusters create "amazonfinefood" --zone "us-central1-c" --username "admin" --cluster-version "1.9.6-gke.1" --machine-type "n1-highmem-2" --image-type "COS" --disk-size "100" --num-nodes "3" --network "default" --accelerator "type=nvidia-tesla-p100,count=1"
+
+gcloud --project "amazonfinefood" compute ssh --ssh-flag=-L3000:localhost:3000 --zone=us-central1-b polyaxon-nfs-vm\
+
+kubectl create namespace polyaxon
+kubectl create -f gke/data-pvc.yml -n polyaxon
+kubectl create -f gke/outputs-pvc.yml -n polyaxon
+kubectl create -f gke/upload-pvc.yml -n polyaxon
+kubectl create -f gke/logs-pvc.yml -n polyaxon
+kubectl create -f gke/repos-pvc.yml -n polyaxon
+
+kubectl --namespace kube-system create sa tiller
+kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+helm init --service-account tiller
+helm repo add polyaxon https://charts.polyaxon.com
+helm repo update
+
+helm install polyaxon/polyaxon --name=polyaxon --namespace=polyaxon -f gke/polyaxon-config.yml
+
+export POLYAXON_IP=$(kubectl get svc --namespace polyaxon polyaxon-polyaxon-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export POLYAXON_HTTP_PORT=80
+export POLYAXON_WS_PORT=80
+
+echo http://$POLYAXON_IP:$POLYAXON_HTTP_PORT
+polyaxon config set --host=$POLYAXON_IP --http_port=$POLYAXON_HTTP_PORT  --ws_port=$POLYAXON_WS_PORT
+
+polyaxon login --username=root --password=rootpassword
+
+
+polyaxon project create --name=finefood --description='Polyaxon Amazon Fine Food.'
+
+polyaxon init finefood
+polyaxon dashboard
+
+polyaxon run -u -f polyaxonfile.yml

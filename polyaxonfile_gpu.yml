@@ -3,20 +3,30 @@ version: 1
 
 kind: experiment
 
+environment:
+  resources:
+    cpu:
+      requests: 1
+      limits: 2
+    gpu:
+      requests: 1
+      limits: 1
+    memory:
+      requests: 512
+      limits: 2048
+      
 declarations:
   batch_size: 128
   learning_rate: 0.001
   dropout: 0.25
   num_epochs: 10
-  sample_size: 10000
 
 run:
-  image: tensorflow/tensorflow:1.7.1-py3
+  image: tensorflow/tensorflow:1.8.0-gpu-py3
   build_steps:
     - pip3 install --no-cache-dir -U polyaxon-helper
     - pip3 install --no-cache-dir -U  keras
   cmd: python3 finefood/run.py --batch_size={{ batch_size }} \
                          --learning_rate={{ learning_rate }} \
                          --dropout={{ dropout }} \
-                         --num_epochs={{ num_epochs }} \
-                         --sample_size={{ sample_size }}
+                         --num_epochs={{ num_epochs }}
