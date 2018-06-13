@@ -12,10 +12,13 @@ var
 .DS_Store
 ./.polyaxon
 data
+logs
+output
+*.ipynb
 .ipynb_checkpoints
 notebooks
+gke
 Pipfile
-Pipfile.lock
-*.ipynb
-output
-logs
+README.md
+setup.py
+.idea
