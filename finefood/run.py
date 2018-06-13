@@ -9,7 +9,6 @@ import pandas as pd
 
 import utils
 import score_model
-import preprocessing
 
 from sklearn.model_selection import train_test_split
 
@@ -121,6 +120,7 @@ def load_data(corpus, word_to_index, sample_size, load_from_csv=False, max_len=2
         data_path = "./data"
 
     if load_from_csv:
+        import preprocessing
         path = os.path.join(data_path, "Reviews.csv")
 
         print("Loading data from", path)
@@ -136,7 +136,7 @@ def load_data(corpus, word_to_index, sample_size, load_from_csv=False, max_len=2
         clean_texts = np.array([preprocessing.clean_text(t, corpus) for t in df.Text])
         scores = df.Score.values
         scores_oh = np_utils.to_categorical(scores)[:, 1:]
-        text_indices = preprocessing.sentences_to_indices(clean_texts, word_to_index, max_len)
+        text_indices = utils.sentences_to_indices(clean_texts, word_to_index, max_len)
     else:
         path = os.path.join(data_path, "Reviews.h5")
         print("Loading data from", path)

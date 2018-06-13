@@ -10,10 +10,10 @@ declarations:
   num_epochs: 10
 
 run:
-  image: tensorflow/tensorflow:1.6.0-py3
+  image: tensorflow/tensorflow:1.7.1-py3
   build_steps:
-    - apt-get -y update && apt-get -y install git
-    - pip3 install --no-cache-dir -U polyaxon-helper keras nltk pandas
+    - pip3 install --no-cache-dir -U polyaxon-helper
+    - pip3 install --no-cache-dir -U  keras
   cmd: python3 finefood/run.py --batch_size={{ batch_size }} \
                          --learning_rate={{ learning_rate }} \
                          --dropout={{ dropout }} \

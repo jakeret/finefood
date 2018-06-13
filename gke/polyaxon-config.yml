@@ -1,0 +1,29 @@
+rbac:
+  enabled: true
+
+ingress:
+  enabled: true
+
+serviceType: LoadBalancer
+
+persistence:
+  data:
+    existingClaim: polyaxon-pvc-data
+  outputs:
+    existingClaim: polyaxon-pvc-outputs
+  logs:
+    existingClaim: polyaxon-pvc-logs
+  repos:
+    enabled: true
+    existingClaim: polyaxon-pvc-repos
+    mountPath: "/repos"
+    accessMode: ReadWriteMany
+  upload:
+    enabled: true
+    existingClaim: polyaxon-pvc-upload
+    mountPath: "/upload"
+    accessMode: ReadWriteMany
+postgresql:
+  persistence:
+      enabled: true
+      size: 5Gi
