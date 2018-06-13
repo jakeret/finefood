@@ -1,14 +1,15 @@
 import argparse
 import os
 
+import h5py
 import tensorflow as tf
 
 import numpy as np
 import pandas as pd
 
-from finefood import utils
-from finefood import score_model
-from finefood import preprocessing
+import utils
+import score_model
+import preprocessing
 
 from sklearn.model_selection import train_test_split
 
@@ -81,7 +82,7 @@ def get_checkpoint_callback():
 
 
 def launch(epochs, batch_size, learning_rate, dropout, sample_size=None):
-    max_len = 10
+    print("Starting with: epochs %s, batch_size %s, learning_rate %s, dropout %s"%(epochs, batch_size, learning_rate, dropout))
 
     data_path = get_data_path()
     if data_path is None:
@@ -91,11 +92,15 @@ def launch(epochs, batch_size, learning_rate, dropout, sample_size=None):
 
     corpus, word_to_index, word_to_vec_map = utils.read_glove_vecs(path)
 
-    X_test, X_train, y_test, y_train = load_data(corpus, max_len, word_to_index, sample_size)
+    X_train, X_test, y_train, y_test = load_data(corpus, word_to_index, sample_size)
+    print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+    max_len = X_train.shape[1]
 
     model = score_model.build_model((max_len,), dropout, word_to_vec_map, word_to_index)
     optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, decay=0.01)
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy',
+                  optimizer=optimizer,
+                  metrics=["acc", "mae"])
     model.summary()
 
     history = train_model(model, X_train, X_test, y_train, y_test,
@@ -110,28 +115,42 @@ def launch(epochs, batch_size, learning_rate, dropout, sample_size=None):
         pass
 
 
-def load_data(corpus, max_len, word_to_index, sample_size):
+def load_data(corpus, word_to_index, sample_size, load_from_csv=False, max_len=250):
     data_path = get_data_path()
     if data_path is None:
         data_path = "./data"
-    path = os.path.join(data_path, "Reviews.csv")
 
-    print("Loading data from", path)
+    if load_from_csv:
+        path = os.path.join(data_path, "Reviews.csv")
 
-    df = pd.read_csv(path).set_index("Id")
-    if sample_size is None:
-        sample_size = df.size
+        print("Loading data from", path)
 
-    df = df.sample(n=sample_size)
+        df = pd.read_csv(path).set_index("Id")
+        if sample_size is not None:
+            df = df.sample(n=sample_size)
+        else:
+            sample_size = df.size
 
-    clean_texts = np.array([preprocessing.clean_text(t, corpus) for t in df.Text])
-    scores = df.Score.values
-    scores_oh = np_utils.to_categorical(scores)[:, 1:]
-    text_indices = preprocessing.sentences_to_indices(clean_texts, word_to_index, max_len)
+        print("Sample size", sample_size)
+
+        clean_texts = np.array([preprocessing.clean_text(t, corpus) for t in df.Text])
+        scores = df.Score.values
+        scores_oh = np_utils.to_categorical(scores)[:, 1:]
+        text_indices = preprocessing.sentences_to_indices(clean_texts, word_to_index, max_len)
+    else:
+        path = os.path.join(data_path, "Reviews.h5")
+        print("Loading data from", path)
+        with h5py.File(path, "r") as fp:
+            text_indices = fp["text_indices"].value
+            scores_oh = fp["scores_oh"].value
+
+        if sample_size is not None:
+            text_indices = text_indices[:int(sample_size)]
+            scores_oh = scores_oh[:int(sample_size)]
+
     X_train, X_test, y_train, y_test = train_test_split(text_indices, scores_oh, test_size=.2)
-    print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-    return X_test, X_train, y_test, y_train
+    return X_train, X_test, y_train, y_test
 
 
 if __name__ == '__main__':
@@ -157,11 +176,13 @@ if __name__ == '__main__':
         default=10,
         type=int
     )
+    parser.add_argument('--sample_size')
 
     args = parser.parse_args()
-    arguments = args.__dict__
 
-    launch(arguments.pop('num_epochs'),
-           arguments.pop('batch_size'),
-           arguments.pop('learning_rate'),
-           arguments.pop('dropout'))
+    launch(args.num_epochs,
+           args.batch_size,
+           args.learning_rate,
+           args.dropout,
+           args.sample_size,
+           )

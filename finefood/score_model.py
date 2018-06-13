@@ -30,7 +30,7 @@ def pretrained_embedding_layer(word_to_vec_map, word_to_index):
         emb_matrix[index, :] = word_to_vec_map[word]
 
     # Define Keras embedding layer with the correct output/input sizes, make it trainable. Use Embedding(...). Make sure to set trainable=False.
-    embedding_layer = Embedding(vocab_len, emb_dim)
+    embedding_layer = Embedding(vocab_len, emb_dim, trainable=False)
 
     # Build the embedding layer, it is required before setting the weights of the embedding layer. Do not modify the "None".
     embedding_layer.build((None,))

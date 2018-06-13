@@ -79,6 +79,7 @@ contractions = {
 "you're": "you are"
 }
 
+STOP_SET = set(stopwords.words("english"))
 
 def clean_text(text, corpus):
     '''Remove unwanted characters, stopwords, and format the text to create fewer nulls word embeddings'''
@@ -92,9 +93,6 @@ def clean_text(text, corpus):
     for word in text:
         if word in contractions:
             word = contractions[word]
-
-        if word not in corpus:
-            word = ""
 
         new_text.append(word)
     text = " ".join(new_text)
@@ -111,11 +109,15 @@ def clean_text(text, corpus):
     text = re.sub("[^a-zA-Z]", " ", text)
 
     text = text.split()
-    stops = set(stopwords.words("english"))
-    text = [w for w in text if not w in stops]
-    text = " ".join(text)
 
-    return text
+    new_text = []
+    for w in text:
+        if w not in STOP_SET and w in corpus:
+            new_text.append(w)
+
+    new_text = " ".join(new_text)
+
+    return new_text
 
 
 def sentences_to_indices(X, word_to_index, max_len):
@@ -156,3 +158,11 @@ def sentences_to_indices(X, word_to_index, max_len):
     return X_indices
 
 
+if __name__ == '__main__':
+    import pandas as pd
+    import utils
+
+    path = "../data/Reviews.csv"
+    df = pd.read_csv(path).set_index("Id")
+    corpus, word_to_index, word_to_vec_map = utils.read_glove_vecs("../data/glove.6B.50d.txt")
+    clean_texts = np.array([clean_text(t, corpus) for t in df.Text])
