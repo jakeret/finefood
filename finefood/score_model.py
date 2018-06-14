@@ -1,13 +1,11 @@
 import numpy as np
 
-np.random.seed(0)
 from keras.models import Model
-from keras.layers import Dense, Input, Dropout, LSTM, Activation
+from keras.layers import Dense, Input, Dropout, LSTM, Activation, Conv1D, MaxPooling1D
 from keras.layers import Embedding
-np.random.seed(1)
 
 
-def pretrained_embedding_layer(word_to_vec_map, word_to_index):
+def pretrained_embedding_layer(word_to_vec_map, word_to_index, max_len):
     """
     Creates a Keras Embedding() layer and loads in pre-trained GloVe 50-dimensional vectors.
 
@@ -30,17 +28,21 @@ def pretrained_embedding_layer(word_to_vec_map, word_to_index):
         emb_matrix[index, :] = word_to_vec_map[word]
 
     # Define Keras embedding layer with the correct output/input sizes, make it trainable. Use Embedding(...). Make sure to set trainable=False.
-    embedding_layer = Embedding(vocab_len, emb_dim, trainable=False)
+    embedding_layer = Embedding(vocab_len,
+                                emb_dim,
+                                weights=[emb_matrix],
+                                input_length=max_len,
+                                trainable=False)
 
-    # Build the embedding layer, it is required before setting the weights of the embedding layer. Do not modify the "None".
-    embedding_layer.build((None,))
+    # # Build the embedding layer, it is required before setting the weights of the embedding layer. Do not modify the "None".
+    # embedding_layer.build((None,))
 
     # Set the weights of the embedding layer to the embedding matrix. Your layer is now pretrained.
-    embedding_layer.set_weights([emb_matrix])
+    # embedding_layer.set_weights([emb_matrix])
 
     return embedding_layer
 
-def build_model(input_shape, dropout, word_to_vec_map, word_to_index):
+def build_2layer_lstm_model(input_shape, dropout, word_to_vec_map, word_to_index):
     """
     Function creating the model's graph.
 
@@ -57,7 +59,7 @@ def build_model(input_shape, dropout, word_to_vec_map, word_to_index):
     sentence_indices = Input(shape=input_shape, dtype=np.int32)
 
     # Create the embedding layer pretrained with GloVe Vectors (≈1 line)
-    embedding_layer =  pretrained_embedding_layer(word_to_vec_map, word_to_index)
+    embedding_layer =  pretrained_embedding_layer(word_to_vec_map, word_to_index, input_shape[0])
 
     # Propagate sentence_indices through your embedding layer, you get back the embeddings
     embeddings = embedding_layer(sentence_indices)
@@ -76,6 +78,23 @@ def build_model(input_shape, dropout, word_to_vec_map, word_to_index):
     X =  Activation('softmax')(X)
 
     # Create Model instance which converts sentence_indices into X.
+    model = Model(sentence_indices, X)
+
+    return model
+
+def build_cnn_lstm_model(input_shape, dropout, word_to_vec_map, word_to_index):
+    sentence_indices = Input(shape=input_shape, dtype=np.int32)
+
+    embedding_layer =  pretrained_embedding_layer(word_to_vec_map, word_to_index, input_shape[0])
+
+    # Propagate sentence_indices through your embedding layer, you get back the embeddings
+    embeddings = embedding_layer(sentence_indices)
+    X = Dropout(dropout)(embeddings)
+    X = Conv1D(64, 5, activation='relu')(X)
+    X = MaxPooling1D(pool_size=4)(X)
+    X = LSTM(100)(X)
+    X = Dense(5, activation='sigmoid')(X)
+    X = Activation('softmax')(X)
     model = Model(sentence_indices, X)
 
     return model

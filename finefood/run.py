@@ -94,7 +94,8 @@ def launch(epochs, batch_size, learning_rate, dropout, sample_size=None, max_len
     X_train, X_test, y_train, y_test = load_data(corpus, word_to_index, sample_size, max_len)
     print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-    model = score_model.build_model((max_len,), dropout, word_to_vec_map, word_to_index)
+    # model = score_model.build_2layer_lstm_model((max_len,), dropout, word_to_vec_map, word_to_index)
+    model = score_model.build_cnn_lstm_model((max_len,), dropout, word_to_vec_map, word_to_index)
     optimizer = Adam(lr=learning_rate)
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam",
