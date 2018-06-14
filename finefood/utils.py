@@ -1,10 +1,11 @@
 import numpy as np
 
+
 def read_glove_vecs(path):
     word_to_vec_map = {}
     word_to_index = {}
     with open(path, "r", encoding='utf-8') as fp:
-        for i, line in enumerate(fp):
+        for i, line in enumerate(fp, start=1):
             values = line.split()
             word = values[0]
             coefs = np.asarray(values[1:], dtype='float32')

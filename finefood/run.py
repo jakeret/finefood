@@ -80,7 +80,7 @@ def get_checkpoint_callback():
     return checkpoint
 
 
-def launch(epochs, batch_size, learning_rate, dropout, sample_size=None):
+def launch(epochs, batch_size, learning_rate, dropout, sample_size=None, max_len=250):
     print("Starting with: epochs %s, batch_size %s, learning_rate %s, dropout %s"%(epochs, batch_size, learning_rate, dropout))
 
     data_path = get_data_path()
@@ -91,14 +91,13 @@ def launch(epochs, batch_size, learning_rate, dropout, sample_size=None):
 
     corpus, word_to_index, word_to_vec_map = utils.read_glove_vecs(path)
 
-    X_train, X_test, y_train, y_test = load_data(corpus, word_to_index, sample_size)
+    X_train, X_test, y_train, y_test = load_data(corpus, word_to_index, sample_size, max_len)
     print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-    max_len = X_train.shape[1]
 
     model = score_model.build_model((max_len,), dropout, word_to_vec_map, word_to_index)
-    optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, decay=0.01)
+    optimizer = Adam(lr=learning_rate)
     model.compile(loss='categorical_crossentropy',
-                  optimizer=optimizer,
+                  optimizer="adam",
                   metrics=["acc", "mae"])
     model.summary()
 
@@ -114,7 +113,7 @@ def launch(epochs, batch_size, learning_rate, dropout, sample_size=None):
         pass
 
 
-def load_data(corpus, word_to_index, sample_size, load_from_csv=False, max_len=250):
+def load_data(corpus, word_to_index, sample_size, max_len, load_from_csv=False):
     data_path = get_data_path()
     if data_path is None:
         data_path = "./data"
@@ -144,8 +143,13 @@ def load_data(corpus, word_to_index, sample_size, load_from_csv=False, max_len=2
             text_indices = fp["text_indices"].value
             scores_oh = fp["scores_oh"].value
 
+            idx = np.arange(text_indices.shape[0])
+            np.random.shuffle(idx)
+            text_indices = text_indices[idx]
+            scores_oh = scores_oh[idx]
+
         if sample_size is not None:
-            text_indices = text_indices[:int(sample_size)]
+            text_indices = text_indices[:int(sample_size), :max_len]
             scores_oh = scores_oh[:int(sample_size)]
 
     X_train, X_test, y_train, y_test = train_test_split(text_indices, scores_oh, test_size=.2)
@@ -176,6 +180,11 @@ if __name__ == '__main__':
         default=10,
         type=int
     )
+    parser.add_argument(
+        '--max_len',
+        default=250,
+        type=int
+    )
     parser.add_argument('--sample_size')
 
     args = parser.parse_args()
@@ -185,4 +194,5 @@ if __name__ == '__main__':
            args.learning_rate,
            args.dropout,
            args.sample_size,
+           args.max_len
            )
