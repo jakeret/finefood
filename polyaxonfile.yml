@@ -3,6 +3,15 @@ version: 1
 
 kind: experiment
 
+environment:
+  resources:
+    cpu:
+      requests: 1
+      limits: 1
+    gpu:
+      requests: 1
+      limits: 1
+
 declarations:
   batch_size: 128
   learning_rate: 0.001
@@ -15,6 +24,8 @@ run:
   build_steps:
     - pip3 install --no-cache-dir -U polyaxon-helper
     - pip3 install --no-cache-dir -U  keras
+  env_vars:
+    - ['LD_LIBRARY_PATH', '/usr/local/nvidia/lib64']
   cmd: python3 finefood/run.py --batch_size={{ batch_size }} \
                          --learning_rate={{ learning_rate }} \
                          --dropout={{ dropout }} \
