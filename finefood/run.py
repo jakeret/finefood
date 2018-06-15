@@ -36,25 +36,23 @@ def set_logging(log_level=None):
 set_logging(get_log_level())
 
 
-def train_model(model, X_train, X_test, y_train, y_test, **kwargs):
-    checkpoint = get_checkpoint_callback()
+def train_model(model, model_type, X_train, X_test, y_train, y_test, **kwargs):
+    checkpoint = get_checkpoint_callback(model_type)
 
-    tensorboard = get_tensorboard_callback(kwargs)
-
-    callbacks = [checkpoint, tensorboard]
+    tensorboard = get_tensorboard_callback(model_type, kwargs)
 
     history = model.fit(X_train, y_train,
                         validation_data=(X_test, y_test),
-                        callbacks=callbacks,
+                        callbacks=[checkpoint, tensorboard],
                         **kwargs)
 
     return history
 
 
-def get_tensorboard_callback(kwargs):
+def get_tensorboard_callback(model_type, kwargs):
     outputs_path = get_outputs_path()
     if outputs_path is None:
-        outputs_path = "./output"
+        outputs_path = os.path.join("./output", model_type)
     print("Storing tensorflow logs to", outputs_path)
 
     tensorboard = TensorBoard(log_dir=outputs_path,
@@ -64,8 +62,8 @@ def get_tensorboard_callback(kwargs):
     return tensorboard
 
 
-def get_checkpoint_callback():
-    filename = "model-{epoch:02d}-{val_acc:.2f}.hdf5"
+def get_checkpoint_callback(model_type):
+    filename = "model-%s-{epoch:02d}-{val_acc:.2f}.hdf5"%model_type
     outputs_path = get_outputs_path()
     if outputs_path is None:
         outputs_path = "./output"
@@ -93,7 +91,7 @@ def launch(model_type, epochs, batch_size, learning_rate, dropout, sample_size=N
                   metrics=["acc", "mae"])
     model.summary()
 
-    history = train_model(model, X_train, X_test, y_train, y_test,
+    history = train_model(model, model_type, X_train, X_test, y_train, y_test,
                           epochs=epochs, batch_size=batch_size, shuffle=True)
 
     try:

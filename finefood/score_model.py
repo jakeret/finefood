@@ -84,7 +84,7 @@ def build_2layer_lstm_model(input_shape, dropout):
     # Propagate X through a Dense layer with softmax activation to get back a batch of 5-dimensional vectors.
     X = Dense(5, activation='softmax')(X)
     # Add a softmax activation
-    X =  Activation('softmax')(X)
+    # X =  Activation('softmax')(X)
 
     # Create Model instance which converts sentence_indices into X.
     model = Model(sentence_indices, X)
@@ -102,8 +102,8 @@ def build_cnn_lstm_model(input_shape, dropout):
     X = Conv1D(128, 5, activation='relu')(X)
     X = MaxPooling1D(pool_size=4)(X)
     X = LSTM(128)(X)
-    X = Dense(5, activation='sigmoid')(X)
-    X = Activation('softmax')(X)
+    X = Dense(5, activation='softmax')(X)
+    # X = Activation('softmax')(X)
     model = Model(sentence_indices, X)
 
     return model
