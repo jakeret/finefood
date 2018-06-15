@@ -80,22 +80,21 @@ def get_checkpoint_callback():
     return checkpoint
 
 
-def launch(epochs, batch_size, learning_rate, dropout, sample_size=None, max_len=250):
-    print("Starting with: epochs %s, batch_size %s, learning_rate %s, dropout %s"%(epochs, batch_size, learning_rate, dropout))
+def launch(model_type, epochs, batch_size, learning_rate, dropout, sample_size=None, max_len=1000):
+    print("Starting with: model-type %s, epochs %s, batch_size %s, learning_rate %s, dropout %s"%(model_type, epochs, batch_size, learning_rate, dropout))
 
-    data_path = get_data_path()
-    if data_path is None:
-        data_path = "./data"
-    path = os.path.join(data_path, "glove.6B.50d.txt")
-    print("Loading glove from", path)
-
-    corpus, word_to_index, word_to_vec_map = utils.read_glove_vecs(path)
-
-    X_train, X_test, y_train, y_test = load_data(corpus, word_to_index, sample_size, max_len)
+    X_train, X_test, y_train, y_test = load_data(sample_size, max_len)
     print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-    # model = score_model.build_2layer_lstm_model((max_len,), dropout, word_to_vec_map, word_to_index)
-    model = score_model.build_cnn_lstm_model((max_len,), dropout, word_to_vec_map, word_to_index)
+    if model_type == "2layer_lstm":
+        model = score_model.build_2layer_lstm_model((max_len,), dropout)
+    elif model_type == "cnn_lstm":
+        model = score_model.build_cnn_lstm_model((max_len,), dropout)
+    elif model_type == "cnn":
+        model = score_model.build_cnn_model((max_len,), dropout)
+    else:
+        raise "Unknown model: %s"%model_type
+
     optimizer = Adam(lr=learning_rate)
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam",
@@ -114,44 +113,25 @@ def launch(epochs, batch_size, learning_rate, dropout, sample_size=None, max_len
         pass
 
 
-def load_data(corpus, word_to_index, sample_size, max_len, load_from_csv=False):
+def load_data(sample_size, max_len, load_from_csv=False):
     data_path = get_data_path()
     if data_path is None:
         data_path = "./data"
 
-    if load_from_csv:
-        import preprocessing
-        path = os.path.join(data_path, "Reviews.csv")
+    path = os.path.join(data_path, "Reviews.h5")
+    print("Loading data from", path)
+    with h5py.File(path, "r") as fp:
+        text_indices = fp["text_indices"].value
+        scores_oh = fp["scores_oh"].value
 
-        print("Loading data from", path)
+        idx = np.arange(text_indices.shape[0])
+        np.random.shuffle(idx)
+        text_indices = text_indices[idx]
+        scores_oh = scores_oh[idx]
 
-        df = pd.read_csv(path).set_index("Id")
-        if sample_size is not None:
-            df = df.sample(n=sample_size)
-        else:
-            sample_size = df.size
-
-        print("Sample size", sample_size)
-
-        clean_texts = np.array([preprocessing.clean_text(t, corpus) for t in df.Text])
-        scores = df.Score.values
-        scores_oh = np_utils.to_categorical(scores)[:, 1:]
-        text_indices = utils.sentences_to_indices(clean_texts, word_to_index, max_len)
-    else:
-        path = os.path.join(data_path, "Reviews.h5")
-        print("Loading data from", path)
-        with h5py.File(path, "r") as fp:
-            text_indices = fp["text_indices"].value
-            scores_oh = fp["scores_oh"].value
-
-            idx = np.arange(text_indices.shape[0])
-            np.random.shuffle(idx)
-            text_indices = text_indices[idx]
-            scores_oh = scores_oh[idx]
-
-        if sample_size is not None:
-            text_indices = text_indices[:int(sample_size), :max_len]
-            scores_oh = scores_oh[:int(sample_size)]
+    if sample_size is not None:
+        text_indices = text_indices[:int(sample_size), :max_len]
+        scores_oh = scores_oh[:int(sample_size)]
 
     X_train, X_test, y_train, y_test = train_test_split(text_indices, scores_oh, test_size=.2)
 
@@ -161,6 +141,11 @@ def load_data(corpus, word_to_index, sample_size, max_len, load_from_csv=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        '--model_type',
+        default="cnn_lstm",
+        choices=["2layer_lstm", "cnn_lstm", "cnn"]
+    )
     parser.add_argument(
         '--batch_size',
         default=32,
@@ -183,14 +168,15 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--max_len',
-        default=250,
+        default=1000,
         type=int
     )
     parser.add_argument('--sample_size')
 
     args = parser.parse_args()
 
-    launch(args.num_epochs,
+    launch(args.model_type,
+           args.num_epochs,
            args.batch_size,
            args.learning_rate,
            args.dropout,

@@ -1,11 +1,15 @@
+import os
+
+import h5py
 import numpy as np
 
 from keras.models import Model
-from keras.layers import Dense, Input, Dropout, LSTM, Activation, Conv1D, MaxPooling1D
+from keras.layers import Dense, Input, Dropout, LSTM, Activation, Conv1D, MaxPooling1D, Flatten
 from keras.layers import Embedding
+from polyaxon_helper import get_data_path
 
 
-def pretrained_embedding_layer(word_to_vec_map, word_to_index, max_len):
+def pretrained_embedding_layer(max_len):
     """
     Creates a Keras Embedding() layer and loads in pre-trained GloVe 50-dimensional vectors.
 
@@ -17,32 +21,25 @@ def pretrained_embedding_layer(word_to_vec_map, word_to_index, max_len):
     embedding_layer -- pretrained layer Keras instance
     """
 
-    vocab_len = len(word_to_index) + 1  # adding 1 to fit Keras embedding (requirement)
-    emb_dim = word_to_vec_map["cucumber"].shape[0]  # define dimensionality of your GloVe word vectors (= 50)
+    data_path = get_data_path()
+    if data_path is None:
+        data_path = "./data"
+    path = os.path.join(data_path, "Reviews.h5")
+    print("Loading glove from", path)
 
-    # Initialize the embedding matrix as a numpy array of zeros of shape (vocab_len, dimensions of word vectors = emb_dim)
-    emb_matrix = np.zeros((vocab_len, emb_dim))
-
-    # Set each row "index" of the embedding matrix to be the word vector representation of the "index"th word of the vocabulary
-    for word, index in word_to_index.items():
-        emb_matrix[index, :] = word_to_vec_map[word]
+    with h5py.File(path, "r") as fp:
+        embedding_matrix = fp["embedding_matrix"].value
 
     # Define Keras embedding layer with the correct output/input sizes, make it trainable. Use Embedding(...). Make sure to set trainable=False.
-    embedding_layer = Embedding(vocab_len,
-                                emb_dim,
-                                weights=[emb_matrix],
+    embedding_layer = Embedding(embedding_matrix.shape[0],
+                                embedding_matrix.shape[1],
+                                weights=[embedding_matrix],
                                 input_length=max_len,
                                 trainable=False)
 
-    # # Build the embedding layer, it is required before setting the weights of the embedding layer. Do not modify the "None".
-    # embedding_layer.build((None,))
-
-    # Set the weights of the embedding layer to the embedding matrix. Your layer is now pretrained.
-    # embedding_layer.set_weights([emb_matrix])
-
     return embedding_layer
 
-def build_2layer_lstm_model(input_shape, dropout, word_to_vec_map, word_to_index):
+def build_2layer_lstm_model(input_shape, dropout):
     """
     Function creating the model's graph.
 
@@ -59,7 +56,7 @@ def build_2layer_lstm_model(input_shape, dropout, word_to_vec_map, word_to_index
     sentence_indices = Input(shape=input_shape, dtype=np.int32)
 
     # Create the embedding layer pretrained with GloVe Vectors (≈1 line)
-    embedding_layer =  pretrained_embedding_layer(word_to_vec_map, word_to_index, input_shape[0])
+    embedding_layer =  pretrained_embedding_layer(input_shape[0])
 
     # Propagate sentence_indices through your embedding layer, you get back the embeddings
     embeddings = embedding_layer(sentence_indices)
@@ -82,19 +79,36 @@ def build_2layer_lstm_model(input_shape, dropout, word_to_vec_map, word_to_index
 
     return model
 
-def build_cnn_lstm_model(input_shape, dropout, word_to_vec_map, word_to_index):
+def build_cnn_lstm_model(input_shape, dropout):
     sentence_indices = Input(shape=input_shape, dtype=np.int32)
 
-    embedding_layer =  pretrained_embedding_layer(word_to_vec_map, word_to_index, input_shape[0])
+    embedding_layer =  pretrained_embedding_layer(input_shape[0])
 
     # Propagate sentence_indices through your embedding layer, you get back the embeddings
     embeddings = embedding_layer(sentence_indices)
     X = Dropout(dropout)(embeddings)
-    X = Conv1D(64, 5, activation='relu')(X)
+    X = Conv1D(128, 5, activation='relu')(X)
     X = MaxPooling1D(pool_size=4)(X)
-    X = LSTM(100)(X)
+    X = LSTM(128)(X)
     X = Dense(5, activation='sigmoid')(X)
     X = Activation('softmax')(X)
     model = Model(sentence_indices, X)
 
+    return model
+
+def build_cnn_model(input_shape, dropout):
+    sequence_input = Input(shape=input_shape, dtype='int32')
+    embedding_layer = pretrained_embedding_layer(input_shape[0])
+    embedded_sequences = embedding_layer(sequence_input)
+    x = Conv1D(128, 5, activation='relu')(embedded_sequences)
+    x = MaxPooling1D(5)(x)
+    x = Conv1D(128, 5, activation='relu')(x)
+    x = MaxPooling1D(5)(x)
+    x = Conv1D(128, 5, activation='relu')(x)
+    x = MaxPooling1D(35)(x)  # global max pooling
+    x = Flatten()(x)
+    x = Dense(128, activation='relu')(x)
+    preds = Dense(5, activation='softmax')(x)
+
+    model = Model(sequence_input, preds)
     return model
