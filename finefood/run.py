@@ -86,15 +86,7 @@ def launch(model_type, epochs, batch_size, learning_rate, dropout, sample_size=N
     X_train, X_test, y_train, y_test = load_data(sample_size, max_len)
     print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
-    if model_type == "2layer_lstm":
-        model = score_model.build_2layer_lstm_model((max_len,), dropout)
-    elif model_type == "cnn_lstm":
-        model = score_model.build_cnn_lstm_model((max_len,), dropout)
-    elif model_type == "cnn":
-        model = score_model.build_cnn_model((max_len,), dropout)
-    else:
-        raise "Unknown model: %s"%model_type
-
+    model = score_model.build_model(model_type, max_len, dropout)
     optimizer = Adam(lr=learning_rate)
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam",

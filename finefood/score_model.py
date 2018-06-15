@@ -9,6 +9,18 @@ from keras.layers import Embedding
 from polyaxon_helper import get_data_path
 
 
+def build_model(model_type, max_len, dropout):
+    if model_type == "2layer_lstm":
+        model = build_2layer_lstm_model((max_len,), dropout)
+    elif model_type == "cnn_lstm":
+        model = build_cnn_lstm_model((max_len,), dropout)
+    elif model_type == "cnn":
+        model = build_cnn_model((max_len,), dropout)
+    else:
+        raise "Unknown model: %s"%model_type
+
+    return model
+
 def pretrained_embedding_layer(max_len):
     """
     Creates a Keras Embedding() layer and loads in pre-trained GloVe 50-dimensional vectors.
