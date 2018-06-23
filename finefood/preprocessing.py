@@ -85,7 +85,7 @@ contractions = {
 
 STOP_SET = set(stopwords.words("english"))
 
-def clean_text(text, corpus):
+def clean_text(text):
     '''Remove unwanted characters, stopwords, and format the text to create fewer nulls word embeddings'''
 
     # Convert words to lower case
@@ -116,7 +116,7 @@ def clean_text(text, corpus):
 
     new_text = []
     for w in text:
-        if w not in STOP_SET and w in corpus:
+        if w not in STOP_SET:
             new_text.append(w)
 
     new_text = " ".join(new_text)
