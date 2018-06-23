@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 
 from keras.utils import np_utils
 from keras.optimizers import Adam
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import ModelCheckpoint, TensorBoard, EarlyStopping
 
 from polyaxon_helper import send_metrics, get_log_level
 from polyaxon_helper import get_data_path, get_outputs_path
@@ -41,9 +41,12 @@ def train_model(model, model_type, X_train, X_test, y_train, y_test, **kwargs):
 
     tensorboard = get_tensorboard_callback(model_type, kwargs)
 
+
+    early_stopping = EarlyStopping(monitor='val_loss', patience=2)
+
     history = model.fit(X_train, y_train,
                         validation_data=(X_test, y_test),
-                        callbacks=[checkpoint, tensorboard],
+                        callbacks=[checkpoint, tensorboard, early_stopping],
                         **kwargs)
 
     return history
@@ -78,18 +81,18 @@ def get_checkpoint_callback(model_type):
     return checkpoint
 
 
-def launch(model_type, epochs, batch_size, learning_rate, dropout, sample_size=None, max_len=1000):
+def launch(model_type, epochs, batch_size, learning_rate, dropout, trainable_embbedings=True, sample_size=None, max_len=1000):
     print("Starting with: model-type %s, epochs %s, batch_size %s, learning_rate %s, dropout %s"%(model_type, epochs, batch_size, learning_rate, dropout))
 
-    X_train, X_test, y_train, y_test = load_data(sample_size, max_len)
-    print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-
-    model = score_model.build_model(model_type, max_len, dropout)
+    model = score_model.build_model(model_type, max_len, dropout, trainable_embbedings)
     optimizer = Adam(lr=learning_rate)
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam",
                   metrics=["acc", "mae"])
     model.summary()
+
+    X_train, X_test, y_train, y_test = load_data(sample_size, max_len)
+    print("Data and label shapes", X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 
     history = train_model(model, model_type, X_train, X_test, y_train, y_test,
                           epochs=epochs, batch_size=batch_size, shuffle=True)
@@ -134,7 +137,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--model_type',
         default="cnn_lstm",
-        choices=["2layer_lstm", "cnn_lstm", "cnn"]
+        choices=["lstm", "2layer_lstm", "cnn_lstm", "cnn", "1layer_cnn"]
     )
     parser.add_argument(
         '--batch_size',
@@ -150,6 +153,11 @@ if __name__ == '__main__':
         '--dropout',
         default=0.5,
         type=float
+    )
+    parser.add_argument(
+        '--trainable_embbedings',
+        default=False,
+        type=bool
     )
     parser.add_argument(
         '--num_epochs',
@@ -170,6 +178,7 @@ if __name__ == '__main__':
            args.batch_size,
            args.learning_rate,
            args.dropout,
+           args.trainable_embbedings,
            args.sample_size,
            args.max_len
            )
