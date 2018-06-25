@@ -41,7 +41,6 @@ def train_model(model, model_type, X_train, X_test, y_train, y_test, **kwargs):
 
     tensorboard = get_tensorboard_callback(model_type, kwargs)
 
-
     early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 
     history = model.fit(X_train, y_train,
@@ -88,7 +87,7 @@ def launch(model_type, epochs, batch_size, learning_rate, dropout, trainable_emb
     optimizer = Adam(lr=learning_rate)
     model.compile(loss='categorical_crossentropy',
                   optimizer="adam",
-                  metrics=["acc", "mae"])
+                  metrics=["acc", score_model.f1])
     model.summary()
 
     X_train, X_test, y_train, y_test = load_data(sample_size, max_len)
@@ -152,7 +151,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--dropout',
         default=0.5,
-        type=float
+        type=float,
+        help="Fraction of the input units to drop"
     )
     parser.add_argument(
         '--trainable_embbedings',
@@ -166,7 +166,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--max_len',
-        default=1000,
+        default=400,
         type=int
     )
     parser.add_argument('--sample_size')
