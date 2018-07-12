@@ -1,6 +1,25 @@
 # finefood
 Amazon Fine Food and Polyaxon
 
+Dataset: https://www.kaggle.com/snap/amazon-fine-food-reviews/version/2
+
+GloVe: http://nlp.stanford.edu/data/glove.6B.zip
+
+Downloaded data expected in:
+
+```
+./data/Reviews.csv
+./data/glove.6B.100d.txt
+```
+
+# References
+
+https://docs.polyaxon.com/
+
+https://blog.keras.io/using-pre-trained-word-embeddings-in-a-keras-model.html
+
+https://ahmedbesbes.com/overview-and-benchmark-of-traditional-and-deep-learning-models-in-text-classification.html
+
 # Local runs
 
 Models can be trained local via command line:
