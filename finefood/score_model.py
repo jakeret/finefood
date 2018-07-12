@@ -176,22 +176,24 @@ def build_cnn_model(input_shape, dropout, trainable_embbedings):
 
 
 def build_1layer_cnn_model(input_shape, dropout, trainable_embbedings):
+    filter_sizes = (2, 3, 5)
+    num_filters = 256
+
     sequence_input = Input(shape=input_shape, dtype='int32')
     max_len = input_shape[0]
     embedding_layer = pretrained_embedding_layer(max_len, trainable_embbedings)
 
     embedded_sequences = embedding_layer(sequence_input)
     feature_maps = []
-    for filter_region_size in (5,6,7):
-        x1 = Conv1D(100, filter_region_size, activation='relu')(embedded_sequences)
+
+    for filter_region_size in filter_sizes:
+        x1 = Conv1D(num_filters, filter_region_size, activation='relu')(embedded_sequences)
         x1 = MaxPooling1D(max_len - filter_region_size)(x1)
         feature_maps.append(x1)
 
-
     x = Concatenate()(feature_maps)
-    x = Dropout(dropout)(x)
-    # x = MaxPooling1D(6)(x)
     x = Flatten()(x)
+    x = Dropout(dropout)(x)
 
     preds = Dense(5, activation='softmax')(x)
 
